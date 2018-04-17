@@ -39,6 +39,12 @@ class ContentProvider {
     }
 }
 class VSCExpress {
+    /**
+     * Create an HTTP server in VS Code for user interface of VS Code extension.
+     *
+     * @param context The collection of utilities private to the extension.
+     * @param webRootPath The relative web root path.
+     */
     constructor(context, webRootPath) {
         const webRootAbsolutePath = path.join(context.extensionPath, webRootPath);
         VSCExpress.contentProvider =
@@ -57,6 +63,18 @@ class VSCExpress {
         }));
         VSCExpress.contentProtocol = VSCExpress.contentProtocol || uuid();
         context.subscriptions.push(vscode.workspace.registerTextDocumentContentProvider(VSCExpress.contentProtocol, VSCExpress.contentProvider));
+    }
+    /**
+     * Open a specific page in VS Code
+     *
+     * @param path The relative path of the page in web root.
+     * @param title The title of the page. The default is an empty string.
+     * @param viewColumn The view column to open the page in. The default is
+     * vscode.ViewColumn.Two.
+     */
+    open(path, title = '', viewColumn = vscode.ViewColumn.Two) {
+        const uri = `${VSCExpress.contentProtocol}://${path}`;
+        vscode.commands.executeCommand('vscode.previewHtml', uri, vscode.ViewColumn.One, title);
     }
 }
 exports.VSCExpress = VSCExpress;
