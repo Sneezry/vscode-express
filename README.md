@@ -82,6 +82,10 @@ command('extension.sayHello', function(res) {
 });
 ```
 
+## Example
+
+<https://github.com/Sneezry/vscode-express-example>
+
 ## License
 
 MIT License
