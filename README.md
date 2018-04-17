@@ -82,6 +82,12 @@ command('extension.sayHello', function(res) {
 });
 ```
 
+If you need pass parameter to the command, send it with `command`:
+
+```javascript
+command('extension.command', 'arg1', 'arg2', callback);
+```
+
 ## Example
 
 <https://github.com/Sneezry/vscode-express-example>
