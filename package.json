@@ -1,6 +1,6 @@
 {
   "name": "vscode-express",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Create an HTTP server in VS Code for user interface of VS Code extension.",
   "main": "out/index.js",
   "repository": {
@@ -21,8 +21,7 @@
     "compile": "tsc -p ./",
     "check": "gts check",
     "clean": "gts clean",
-    "fix": "gts fix",
-    "postinstall": "node ./node_modules/vscode/bin/install"
+    "fix": "gts fix"
   },
   "engines": {
     "vscode": "^1.18.0"
