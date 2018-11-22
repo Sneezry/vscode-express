@@ -25,6 +25,9 @@ class ContentProvider {
         this.app.use(bodyParser.json());
     }
     _getUri(path) {
+        if (path.substr(0, 1) !== '/') {
+            path = '/' + path;
+        }
         return `http://127.0.0.1:${this._serverPort}${path}`;
     }
     provideTextDocumentContent(path) {
