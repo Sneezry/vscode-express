@@ -60,8 +60,8 @@ export class VSCExpress {
           try {
             const data = req.query.data;
             const command = JSON.parse(data);
-            await vscode.commands.executeCommand.apply(null, command);
-            return res.json({code: 0, message: null});
+            const result = await vscode.commands.executeCommand.apply(null, command);
+            return res.json({code: 0, message: null, result});
           } catch (error) {
             console.log(error);
             return res.json({code: 1, message: error.message});
