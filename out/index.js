@@ -12,7 +12,6 @@ const bodyParser = require("body-parser");
 const express = require("express");
 const http = require("http");
 const path = require("path");
-const uuid = require("uuid");
 const vscode = require("vscode");
 class ContentProvider {
     constructor(webRootAbsolutePath) {
@@ -25,17 +24,15 @@ class ContentProvider {
         this.app.use('/', express.static(webRootAbsolutePath));
         this.app.use(bodyParser.json());
     }
-    _getUri(uri) {
-        return `http://127.0.0.1:${this._serverPort}${uri.path}`;
+    _getUri(path) {
+        return `http://127.0.0.1:${this._serverPort}${path}`;
     }
-    provideTextDocumentContent(uri) {
-        return __awaiter(this, void 0, void 0, function* () {
-            return `<html>
+    provideTextDocumentContent(path) {
+        return `<html>
       <body style="margin: 0; padding: 0; height: 100%; overflow: hidden;">
-          <iframe src="${this._getUri(uri)}" width="100%" height="100%" frameborder="0" style="position:absolute; left: 0; right: 0; bottom: 0; top: 0px;"/>
+          <iframe src="${this._getUri(path)}" width="100%" height="100%" frameborder="0" style="position:absolute; left: 0; right: 0; bottom: 0; top: 0px;"/>
       </body>
       </html>`;
-        });
     }
 }
 class VSCExpress {
@@ -61,8 +58,6 @@ class VSCExpress {
                 return res.json({ code: 1, message: error.message });
             }
         }));
-        VSCExpress.contentProtocol = VSCExpress.contentProtocol || uuid();
-        context.subscriptions.push(vscode.workspace.registerTextDocumentContentProvider(VSCExpress.contentProtocol, VSCExpress.contentProvider));
     }
     /**
      * Open a specific page in VS Code
@@ -72,10 +67,37 @@ class VSCExpress {
      * @param viewColumn The view column to open the page in. The default is
      * vscode.ViewColumn.Two.
      */
-    open(path, title = '', viewColumn = vscode.ViewColumn.Two) {
-        const uri = `${VSCExpress.contentProtocol}://${path}`;
-        vscode.commands.executeCommand('vscode.previewHtml', uri, vscode.ViewColumn.One, title);
+    open(path, title = '', viewColumn = vscode.ViewColumn.Two, options) {
+        options = options || {
+            enableScripts: true,
+            enableCommandUris: true
+        };
+        new VSCExpressPanelContext(path, title, viewColumn, options);
     }
 }
+VSCExpress.webviewPanelList = {};
 exports.VSCExpress = VSCExpress;
+class VSCExpressPanelContext {
+    constructor(path, title, viewColumn, options) {
+        this.path = path;
+        this.title = title || path;
+        this.viewColumn = viewColumn || vscode.ViewColumn.Two;
+        this.options = options || {};
+        const html = VSCExpress.contentProvider.provideTextDocumentContent(path);
+        if (!VSCExpress.webviewPanelList[this.path]) {
+            this.panel = vscode.window.createWebviewPanel('VSCExpress', this.title, this.viewColumn, this.options);
+            this.panel.webview.html = html;
+            this.panel.onDidDispose(() => {
+                delete VSCExpress.webviewPanelList[this.path];
+            }, this);
+            VSCExpress.webviewPanelList[this.path] = this.panel;
+        }
+        else {
+            this.panel = VSCExpress.webviewPanelList[this.path];
+            this.panel.title = this.title;
+            this.panel.webview.html = html;
+        }
+    }
+}
+exports.VSCExpressPanelContext = VSCExpressPanelContext;
 //# sourceMappingURL=index.js.map

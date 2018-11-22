@@ -1,7 +1,17 @@
 import * as vscode from 'vscode';
+declare class ContentProvider {
+    private _server;
+    private _serverPort;
+    app: import("express-serve-static-core").Express;
+    constructor(webRootAbsolutePath: string);
+    private _getUri;
+    provideTextDocumentContent(path: string): string;
+}
 export declare class VSCExpress {
-    private static contentProvider;
-    private static contentProtocol;
+    static contentProvider: ContentProvider;
+    static webviewPanelList: {
+        [uri: string]: vscode.WebviewPanel;
+    };
     /**
      * Create an HTTP server in VS Code for user interface of VS Code extension.
      *
@@ -17,5 +27,14 @@ export declare class VSCExpress {
      * @param viewColumn The view column to open the page in. The default is
      * vscode.ViewColumn.Two.
      */
-    open(path: string, title?: string, viewColumn?: vscode.ViewColumn): void;
+    open(path: string, title?: string, viewColumn?: vscode.ViewColumn, options?: vscode.WebviewOptions): void;
 }
+export declare class VSCExpressPanelContext {
+    private path;
+    private title;
+    private viewColumn;
+    private options;
+    panel: vscode.WebviewPanel;
+    constructor(path: string, title?: string, viewColumn?: vscode.ViewColumn, options?: vscode.WebviewOptions);
+}
+export {};
