@@ -38,7 +38,7 @@ class ContentProvider {
 
 export class VSCExpress {
   static contentProvider: ContentProvider;
-  static webviewPanelList: {[uri: string]: vscode.WebviewPanel};
+  static webviewPanelList: {[uri: string]: vscode.WebviewPanel} = {};
 
   /**
    * Create an HTTP server in VS Code for user interface of VS Code extension.
