@@ -27,7 +27,7 @@ export declare class VSCExpress {
      * @param viewColumn The view column to open the page in. The default is
      * vscode.ViewColumn.Two.
      */
-    open(path: string, title?: string, viewColumn?: vscode.ViewColumn, options?: vscode.WebviewOptions): void;
+    open(path: string, title?: string, viewColumn?: vscode.ViewColumn, options?: vscode.WebviewPanelOptions & vscode.WebviewOptions): void;
 }
 export declare class VSCExpressPanelContext {
     private path;
@@ -35,6 +35,6 @@ export declare class VSCExpressPanelContext {
     private viewColumn;
     private options;
     panel: vscode.WebviewPanel;
-    constructor(path: string, title?: string, viewColumn?: vscode.ViewColumn, options?: vscode.WebviewOptions);
+    constructor(path: string, title?: string, viewColumn?: vscode.ViewColumn, options?: vscode.WebviewPanelOptions & vscode.WebviewOptions);
 }
 export {};

@@ -79,7 +79,7 @@ export class VSCExpress {
    */
   open(
       path: string, title = '',
-      viewColumn: vscode.ViewColumn = vscode.ViewColumn.Two, options?: vscode.WebviewOptions) {
+      viewColumn: vscode.ViewColumn = vscode.ViewColumn.Two, options?: vscode.WebviewPanelOptions & vscode.WebviewOptions) {
     options = options || {
       enableScripts: true,
       enableCommandUris: true
@@ -97,7 +97,7 @@ export class VSCExpressPanelContext {
 
   panel: vscode.WebviewPanel;
 
-  constructor(path: string, title?: string, viewColumn?: vscode.ViewColumn, options?: vscode.WebviewOptions) {
+  constructor(path: string, title?: string, viewColumn?: vscode.ViewColumn, options?: vscode.WebviewPanelOptions & vscode.WebviewOptions) {
     this.path = path;
     this.title = title || path;
     this.viewColumn = viewColumn || vscode.ViewColumn.Two;
