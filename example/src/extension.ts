@@ -28,6 +28,9 @@ export function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(vscode.commands.registerCommand('extension.vscexpress', () => {
         vscexpress.open('index.html', 'VS Code Express Example', vscode.ViewColumn.One);
     }));
+    context.subscriptions.push(vscode.commands.registerCommand('extension.vscexpressclose', (path: string) => {
+        vscexpress.close(path);
+    }));
 }
 
 // this method is called when your extension is deactivated

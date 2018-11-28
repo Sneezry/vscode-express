@@ -83,9 +83,15 @@ export class VSCExpress {
     options = options || {
       enableScripts: true,
       enableCommandUris: true
-    }
+    };
     
     new VSCExpressPanelContext(path, title, viewColumn, options);
+  }
+
+  close(path: string) {
+    if (VSCExpress.webviewPanelList[path]) {
+      VSCExpress.webviewPanelList[path].dispose();
+    }
   }
 }
 

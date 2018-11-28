@@ -28,6 +28,7 @@ export declare class VSCExpress {
      * vscode.ViewColumn.Two.
      */
     open(path: string, title?: string, viewColumn?: vscode.ViewColumn, options?: vscode.WebviewPanelOptions & vscode.WebviewOptions): void;
+    close(path: string): void;
 }
 export declare class VSCExpressPanelContext {
     private path;

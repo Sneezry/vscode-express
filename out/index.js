@@ -77,6 +77,11 @@ class VSCExpress {
         };
         new VSCExpressPanelContext(path, title, viewColumn, options);
     }
+    close(path) {
+        if (VSCExpress.webviewPanelList[path]) {
+            VSCExpress.webviewPanelList[path].dispose();
+        }
+    }
 }
 VSCExpress.webviewPanelList = {};
 exports.VSCExpress = VSCExpress;
