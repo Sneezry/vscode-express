@@ -91,6 +91,7 @@ export class VSCExpress {
   close(path: string) {
     if (VSCExpress.webviewPanelList[path]) {
       VSCExpress.webviewPanelList[path].dispose();
+      delete VSCExpress.webviewPanelList[path];
     }
   }
 }

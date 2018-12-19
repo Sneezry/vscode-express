@@ -80,6 +80,7 @@ class VSCExpress {
     close(path) {
         if (VSCExpress.webviewPanelList[path]) {
             VSCExpress.webviewPanelList[path].dispose();
+            delete VSCExpress.webviewPanelList[path];
         }
     }
 }

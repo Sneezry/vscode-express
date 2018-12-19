@@ -1,6 +1,6 @@
 {
   "name": "vscode-express",
-  "version": "0.1.12",
+  "version": "0.1.13",
   "description": "Create an HTTP server in VS Code for user interface of VS Code extension.",
   "main": "out/index.js",
   "repository": {
