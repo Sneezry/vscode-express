@@ -57,7 +57,8 @@ export class VSCExpressPanelContext {
     const fileUrl = vscode.Uri.file(filePath).with({scheme: 'vscode-resource'});
 
     let html = fs.readFileSync(filePath, 'utf8');
-    html = html.replace(/<head>/, `<head><base href="${fileUrl.toString()}">`);
+    html = html.replace(
+        /(<head(\s.*)?>)/, `$1<base href="${fileUrl.toString()}">`);
 
     if (!VSCExpress.webviewPanelList[this.filePath]) {
       this.panel = vscode.window.createWebviewPanel(
