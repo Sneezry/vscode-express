@@ -1,72 +1,13 @@
-import * as bodyParser from 'body-parser';
-import * as express from 'express';
-import * as http from 'http';
-import * as net from "net";
+import * as fs from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
 
-class ContentProvider {
-  private _server: http.Server;
-  private _serverPort = 0;
-
-  app = express();
-
-  constructor(webRootAbsolutePath: string) {
-    this._server = http.createServer(this.app);
-    const port = (this._server.listen(0).address() as net.AddressInfo).port;
-    this._serverPort = port;
-    console.log(`Starting express server on port: ${port}`);
-
-    this.app.use('/', express.static(webRootAbsolutePath));
-    this.app.use(bodyParser.json());
-  }
-
-  private _getUri(path: string): string {
-    if (path.substr(0, 1) !== '/') {
-      path = '/' + path;
-    }
-    
-    return `http://127.0.0.1:${this._serverPort}${path}`;
-  }
-
-  provideTextDocumentContent(path: string) {
-    return `<html>
-      <body style="margin: 0; padding: 0; height: 100%; overflow: hidden;">
-          <iframe src="${
-        this._getUri(
-            path)}" width="100%" height="100%" frameborder="0" style="position:absolute; left: 0; right: 0; bottom: 0; top: 0px;"/>
-      </body>
-      </html>`;
-  }
-}
-
 export class VSCExpress {
-  static contentProvider: ContentProvider;
   static webviewPanelList: {[uri: string]: vscode.WebviewPanel} = {};
+  private _webRootAbsolutePath: string;
 
-  /**
-   * Create an HTTP server in VS Code for user interface of VS Code extension.
-   *
-   * @param context The collection of utilities private to the extension.
-   * @param webRootPath The relative web root path.
-   */
   constructor(context: vscode.ExtensionContext, webRootPath: string) {
-    const webRootAbsolutePath = path.join(context.extensionPath, webRootPath);
-
-    VSCExpress.contentProvider =
-        VSCExpress.contentProvider || new ContentProvider(webRootAbsolutePath);
-    VSCExpress.contentProvider.app.get(
-        '/command', async (req: express.Request, res: express.Response) => {
-          try {
-            const data = req.query.data;
-            const command = JSON.parse(data);
-            const result = await vscode.commands.executeCommand.apply(null, command);
-            return res.json({code: 0, message: null, result});
-          } catch (error) {
-            console.log(error);
-            return res.json({code: 1, message: error.message});
-          }
-        });
+    this._webRootAbsolutePath = path.join(context.extensionPath, webRootPath);
   }
 
   /**
@@ -78,14 +19,15 @@ export class VSCExpress {
    * vscode.ViewColumn.Two.
    */
   open(
-      path: string, title = '',
-      viewColumn: vscode.ViewColumn = vscode.ViewColumn.Two, options?: vscode.WebviewPanelOptions & vscode.WebviewOptions) {
-    options = options || {
-      enableScripts: true,
-      enableCommandUris: true
-    };
-    
-    new VSCExpressPanelContext(path, title, viewColumn, options);
+      filePath: string, title = '',
+      viewColumn: vscode.ViewColumn = vscode.ViewColumn.Two,
+      options?: vscode.WebviewPanelOptions&vscode.WebviewOptions) {
+    options = options || {enableScripts: true, enableCommandUris: true};
+
+    filePath = path.join(this._webRootAbsolutePath, filePath);
+    const context =
+        new VSCExpressPanelContext(filePath, title, viewColumn, options);
+    return context.panel;
   }
 
   close(path: string) {
@@ -97,30 +39,41 @@ export class VSCExpress {
 }
 
 export class VSCExpressPanelContext {
-  private path: string;
+  private filePath: string;
   private title: string|undefined;
   private viewColumn: vscode.ViewColumn;
   private options: vscode.WebviewOptions;
 
   panel: vscode.WebviewPanel;
 
-  constructor(path: string, title?: string, viewColumn?: vscode.ViewColumn, options?: vscode.WebviewPanelOptions & vscode.WebviewOptions) {
-    this.path = path;
-    this.title = title || path;
+  constructor(
+      filePath: string, title?: string, viewColumn?: vscode.ViewColumn,
+      options?: vscode.WebviewPanelOptions&vscode.WebviewOptions) {
+    this.filePath = filePath;
+    this.title = title || filePath;
     this.viewColumn = viewColumn || vscode.ViewColumn.Two;
     this.options = options || {};
-    const html = VSCExpress.contentProvider.provideTextDocumentContent(path);
-    
-    if (!VSCExpress.webviewPanelList[this.path]) {
-      this.panel = vscode.window.createWebviewPanel('VSCExpress', this.title, this.viewColumn, this.options);
+
+    const fileUrl = vscode.Uri.file(filePath).with({scheme: 'vscode-resource'});
+
+    let html = fs.readFileSync(filePath, 'utf8');
+    html = html.replace(/<head>/, `<head><base href="${fileUrl.toString()}">`);
+
+    if (!VSCExpress.webviewPanelList[this.filePath]) {
+      this.panel = vscode.window.createWebviewPanel(
+          'VSCExpress', this.title, this.viewColumn, this.options);
       this.panel.webview.html = html;
+      this.panel.webview.onDidReceiveMessage(async message => {
+        const payload = await vscode.commands.executeCommand.apply(
+            null, [message.command as string, ...message.parameter]);
+        this.panel.webview.postMessage({messageId: message.messageId, payload});
+      });
       this.panel.onDidDispose(() => {
-        delete VSCExpress.webviewPanelList[this.path];
+        delete VSCExpress.webviewPanelList[this.filePath];
       }, this);
-      VSCExpress.webviewPanelList[this.path] = this.panel;
-    }
-    else {
-      this.panel = VSCExpress.webviewPanelList[this.path];
+      VSCExpress.webviewPanelList[this.filePath] = this.panel;
+    } else {
+      this.panel = VSCExpress.webviewPanelList[this.filePath];
       this.panel.title = this.title;
       this.panel.webview.html = html;
     }
