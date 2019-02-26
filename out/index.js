@@ -8,59 +8,12 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-const bodyParser = require("body-parser");
-const express = require("express");
-const http = require("http");
+const fs = require("fs");
 const path = require("path");
 const vscode = require("vscode");
-class ContentProvider {
-    constructor(webRootAbsolutePath) {
-        this._serverPort = 0;
-        this.app = express();
-        this._server = http.createServer(this.app);
-        const port = this._server.listen(0).address().port;
-        this._serverPort = port;
-        console.log(`Starting express server on port: ${port}`);
-        this.app.use('/', express.static(webRootAbsolutePath));
-        this.app.use(bodyParser.json());
-    }
-    _getUri(path) {
-        if (path.substr(0, 1) !== '/') {
-            path = '/' + path;
-        }
-        return `http://127.0.0.1:${this._serverPort}${path}`;
-    }
-    provideTextDocumentContent(path) {
-        return `<html>
-      <body style="margin: 0; padding: 0; height: 100%; overflow: hidden;">
-          <iframe src="${this._getUri(path)}" width="100%" height="100%" frameborder="0" style="position:absolute; left: 0; right: 0; bottom: 0; top: 0px;"/>
-      </body>
-      </html>`;
-    }
-}
 class VSCExpress {
-    /**
-     * Create an HTTP server in VS Code for user interface of VS Code extension.
-     *
-     * @param context The collection of utilities private to the extension.
-     * @param webRootPath The relative web root path.
-     */
     constructor(context, webRootPath) {
-        const webRootAbsolutePath = path.join(context.extensionPath, webRootPath);
-        VSCExpress.contentProvider =
-            VSCExpress.contentProvider || new ContentProvider(webRootAbsolutePath);
-        VSCExpress.contentProvider.app.get('/command', (req, res) => __awaiter(this, void 0, void 0, function* () {
-            try {
-                const data = req.query.data;
-                const command = JSON.parse(data);
-                const result = yield vscode.commands.executeCommand.apply(null, command);
-                return res.json({ code: 0, message: null, result });
-            }
-            catch (error) {
-                console.log(error);
-                return res.json({ code: 1, message: error.message });
-            }
-        }));
+        this._webRootAbsolutePath = path.join(context.extensionPath, webRootPath);
     }
     /**
      * Open a specific page in VS Code
@@ -70,43 +23,64 @@ class VSCExpress {
      * @param viewColumn The view column to open the page in. The default is
      * vscode.ViewColumn.Two.
      */
-    open(path, title = '', viewColumn = vscode.ViewColumn.Two, options) {
-        options = options || {
-            enableScripts: true,
-            enableCommandUris: true
-        };
-        new VSCExpressPanelContext(path, title, viewColumn, options);
+    open(filePath, title = '', viewColumn = vscode.ViewColumn.Two, options) {
+        options = options || { enableScripts: true, enableCommandUris: true };
+        filePath = path.join(this._webRootAbsolutePath, filePath);
+        const context = new VSCExpressPanelContext(filePath, title, viewColumn, options);
+        return context.panel;
     }
-    close(path) {
-        if (VSCExpress.webviewPanelList[path]) {
-            VSCExpress.webviewPanelList[path].dispose();
-            delete VSCExpress.webviewPanelList[path];
+    close(filePath) {
+        filePath = path.join(this._webRootAbsolutePath, filePath);
+        if (VSCExpress.webviewPanelList[filePath]) {
+            VSCExpress.webviewPanelList[filePath].dispose();
+            delete VSCExpress.webviewPanelList[filePath];
         }
     }
 }
 VSCExpress.webviewPanelList = {};
 exports.VSCExpress = VSCExpress;
 class VSCExpressPanelContext {
-    constructor(path, title, viewColumn, options) {
-        this.path = path;
-        this.title = title || path;
+    constructor(filePath, title, viewColumn, options) {
+        this.filePath = filePath;
+        this.title = title || filePath;
         this.viewColumn = viewColumn || vscode.ViewColumn.Two;
         this.options = options || {};
-        const html = VSCExpress.contentProvider.provideTextDocumentContent(path);
-        if (!VSCExpress.webviewPanelList[this.path]) {
-            this.panel = vscode.window.createWebviewPanel('VSCExpress', this.title, this.viewColumn, this.options);
-            this.panel.webview.html = html;
-            this.panel.onDidDispose(() => {
-                delete VSCExpress.webviewPanelList[this.path];
-            }, this);
-            VSCExpress.webviewPanelList[this.path] = this.panel;
+        const fileUrl = vscode.Uri.file(filePath).with({ scheme: 'vscode-resource' });
+        let html = fs.readFileSync(filePath, 'utf8');
+        if (/(<head(\s.*)?>)/.test(html)) {
+            html = html.replace(/(<head(\s.*)?>)/, `$1<base href="${fileUrl.toString()}">`);
+        }
+        else if (/(<html(\s.*)?>)/.test(html)) {
+            html = html.replace(/(<html(\s.*)?>)/, `$1<head><base href="${fileUrl.toString()}"></head>`);
         }
         else {
-            this.panel = VSCExpress.webviewPanelList[this.path];
+            html = `<head><base href="${fileUrl.toString()}"></head>${html}`;
+        }
+        if (!VSCExpress.webviewPanelList[this.filePath]) {
+            this.panel = vscode.window.createWebviewPanel('VSCExpress', this.title, this.viewColumn, this.options);
+            this.panel.webview.html = html;
+            this.panel.webview.onDidReceiveMessage((message) => __awaiter(this, void 0, void 0, function* () {
+                // tslint:disable-next-line:no-any
+                const payload = { code: 0 };
+                try {
+                    const result = yield vscode.commands.executeCommand.apply(null, [message.command, ...message.parameter]);
+                    payload.result = result;
+                }
+                catch (error) {
+                    payload.message = error.message;
+                }
+                this.panel.webview.postMessage({ messageId: message.messageId, payload });
+            }));
+            this.panel.onDidDispose(() => {
+                delete VSCExpress.webviewPanelList[this.filePath];
+            }, this);
+            VSCExpress.webviewPanelList[this.filePath] = this.panel;
+        }
+        else {
+            this.panel = VSCExpress.webviewPanelList[this.filePath];
             this.panel.title = this.title;
             this.panel.webview.html = html;
         }
     }
 }
 exports.VSCExpressPanelContext = VSCExpressPanelContext;
-//# sourceMappingURL=index.js.map

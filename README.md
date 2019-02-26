@@ -68,7 +68,9 @@ window.addEventListener('message', event => {
   for (let index = 0; index < callbackStack.length; index++) {
     const callbackItem = callbackStack[index];
     if (callbackItem.messageId === message.messageId) {
-      callbackItem.callback(message.payload);
+      if (callbackItem.callback) {
+        callbackItem.callback(message.payload);
+      }
       callbackStack.splice(index, 1);
       break;
     }
@@ -101,6 +103,37 @@ command('extension.command', 'arg1', 'arg2', callback);
 ## Example
 
 <https://github.com/Sneezry/vscode-express-example>
+
+## Build from Source
+
+```
+git clone https://github.com/Sneezry/vscode-express.git
+cd vscode express
+```
+
+And you need add `prepare` script in `package.json` for `npm install`:
+
+```
+  ...
+  "fix": "gts fix",
+  "prepare": "node ./node_modules/vscode/bin/install"
+}
+```
+
+Then run `npm install`
+
+```
+npm install
+npm run compile
+```
+
+To run the example, compile the code first, then open the example folder with VS Code:
+
+```
+code example
+```
+
+In VS Code, press `F5` to start debug.
 
 ## License
 
