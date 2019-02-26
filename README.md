@@ -1,6 +1,6 @@
 # vscode-express
 
-Create an HTTP server in VS Code for user interface of VS Code extension.
+Use webview in VS Code for user interface of VS Code extension.
 
 ## Get Started
 
