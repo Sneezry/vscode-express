@@ -2,3 +2,4 @@ example
 node_modules
 tsconfig.json
 index.ts
+*.tgz
