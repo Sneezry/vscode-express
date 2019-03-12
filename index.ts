@@ -57,23 +57,43 @@ export class VSCExpressPanelContext {
   constructor(
       filePath: string, title?: string, viewColumn?: vscode.ViewColumn,
       options?: vscode.WebviewPanelOptions&vscode.WebviewOptions) {
+    const _location:
+        {href: string, search?: string, hash?: string} = {href: filePath};
+    const _hash = filePath.split('#')[1];
+    filePath = filePath.split('#')[0];
+    const _search = filePath.split('?')[1];
+    filePath = filePath.split('?')[0];
+    if (_hash) {
+      _location.hash = '#' + _hash;
+    }
+    if (_search) {
+      _location.search = '?' + _search;
+    }
     this.filePath = filePath;
     this.title = title || filePath;
     this.viewColumn = viewColumn || vscode.ViewColumn.Two;
     this.options = options || {};
 
     const fileUrl = vscode.Uri.file(filePath).with({scheme: 'vscode-resource'});
+    let locationInject = '';
+    if (_location) {
+      locationInject =
+          `<script>var _location=${JSON.stringify(_location)}</script>`;
+    }
 
     let html = fs.readFileSync(filePath, 'utf8');
     if (/(<head(\s.*)?>)/.test(html)) {
       html = html.replace(
-          /(<head(\s.*)?>)/, `$1<base href="${fileUrl.toString()}">`);
+          /(<head(\s.*)?>)/,
+          `$1<base href="${fileUrl.toString()}">${locationInject}`);
     } else if (/(<html(\s.*)?>)/.test(html)) {
       html = html.replace(
           /(<html(\s.*)?>)/,
-          `$1<head><base href="${fileUrl.toString()}"></head>`);
+          `$1<head><base href="${fileUrl.toString()}">${
+              locationInject}</head>`);
     } else {
-      html = `<head><base href="${fileUrl.toString()}"></head>${html}`;
+      html = `<head><base href="${fileUrl.toString()}">${
+          locationInject}</head>${html}`;
     }
 
     if (!VSCExpress.webviewPanelList[this.filePath]) {
@@ -81,7 +101,6 @@ export class VSCExpressPanelContext {
           'VSCExpress', this.title, this.viewColumn, this.options);
       this.panel.webview.html = html;
       this.panel.webview.onDidReceiveMessage(async message => {
-        // tslint:disable-next-line:no-any
         const payload: VSCExpressCommandResponsePayload = {code: 0};
         try {
           const result = await vscode.commands.executeCommand.apply(

@@ -18,6 +18,7 @@ import {VSCExpress} from 'vscode-express';
 
 export function activate(context: vscode.ExtensionContext) {
     // initial vscode express
+    // 'view' is the ABSOLUTE root path of the web view in the extension
     const vscexpress = new VSCExpress(context, 'view');
     // register command
     context.subscriptions.push(vscode.commands.registerCommand('extension.vscexpress', () => {
@@ -98,6 +99,36 @@ If you need pass parameter to the command, send it with `command`:
 
 ```javascript
 command('extension.command', 'arg1', 'arg2', callback);
+```
+
+### `location` Object Access for Web
+
+Generally, you can pass some initial data with `location.search` or `location.hash` to JavaScript in web. The VS Code webview doesn't support `search` or `hash` as it uses file system to open the file you request. As a workaround, you can use a built-in variable of VSCExpress, `_location` to accesee `location.search`, `location.hash` and `location.href`.
+
+Thus, you need to change your origin code a bit:
+
+```javascript
+const href = _location ? _location.href : location.href;
+```
+
+> Note: Different from `location`, `_location` has only `search`, `hash` and `href` property.
+
+### CORS and Open Links in Browser
+
+Unfortunately, VS Code webview doesn't support CORS. However, it's not hard to make a workaround by using message passing. You can register the action to fetch remote content (with `request` module or something else) as a VS Code command, and call the action with `command` function mentioned above in the web.
+
+```typescript
+vscode.commands.registerCommand('myExtension.httpRequest', async (uri: string) => {
+  return await request(uri);
+});
+```
+
+Open links in browser is similar:
+
+```typescript
+vscode.commands.registerCommand('myExtension.openUri', (uri: string) => {
+  vscode.commands.executeCommand('vscode.open', vscode.Uri.parse(uri));
+});
 ```
 
 ## Example
